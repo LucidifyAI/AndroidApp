@@ -20,8 +20,10 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import com.example.eeglabeler.ui.PatchPacketParser
 import com.example.eeglabeler.ui.WaveformCanvas
+import com.example.eeglabeler.ui.SpectrogramCanvas
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+
 
 class MainActivity : ComponentActivity() {
     private lateinit var perms: PermissionGate
@@ -157,19 +159,68 @@ fun App(ble: CgxBleClient) {
 
         Spacer(Modifier.height(8.dp))
 
-        // Half-height waveform (so you can add spectrogram below)
-        WaveformCanvas(
-            samples = sampleFlow,
-            sampleRate = 250,
-            channelCount = 8,
-            windowSeconds = 10f,
-            normWindowSeconds = 2f,
-            enabledChannels = channelEnabled,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-        )
+		WaveformCanvas(
+			samples = sampleFlow,
+			sampleRate = 250,
+			channelCount = 8,
+			windowSeconds = 10f,
+			normWindowSeconds = 2f,
+			enabledChannels = channelEnabled,
+			modifier = Modifier
+				.fillMaxWidth()
+				.height(300.dp)
+		)
 
-        // Spectrogram will go here later (with its own toggles above it)
+		Spacer(Modifier.height(6.dp))
+
+		// Spectrogram toggles (separate list)
+		val specLabels = channelLabels
+		val specEnabled = remember { mutableStateListOf(true, false, false, false, false, false, false, false) }
+
+		// reuse your compact chip row helper pattern (same sizes)
+		CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+			LazyRow(
+				horizontalArrangement = Arrangement.spacedBy(2.dp),
+				verticalAlignment = Alignment.CenterVertically,
+				modifier = Modifier.fillMaxWidth()
+			) {
+				itemsIndexed(specLabels) { i, label ->
+					FilterChip(
+						selected = specEnabled[i],
+						onClick = {
+							// allow any combination; spectrogram displays the first enabled
+							specEnabled[i] = !specEnabled[i]
+						},
+						modifier = Modifier
+							.width(40.dp)
+							.height(24.dp),
+						label = {
+							Text(
+								text = label.replace("_d", "").take(2),
+								fontSize = 11.sp,
+								maxLines = 1,
+								overflow = TextOverflow.Clip
+							)
+						}
+					)
+				}
+			}
+		}
+
+		Spacer(Modifier.height(6.dp))
+
+		// Spectrogram canvas (10 minutes across width)
+		SpectrogramCanvas(
+			samples = sampleFlow,
+			sampleRate = 250,
+			channelCount = 8,
+			windowSeconds = 600f,
+			fftSize = 256,
+			maxFreqHz = 60f,
+			enabledChannels = specEnabled,
+			modifier = Modifier
+				.fillMaxWidth()
+				.height(300.dp)
+		)
     }
 }
