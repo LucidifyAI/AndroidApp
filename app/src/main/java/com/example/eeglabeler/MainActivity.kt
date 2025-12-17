@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
         perms = PermissionGate(this)
         ble = CgxBleClient(this)
         perms.requestBlePermissions()
-
+        title="Lucidify Explorer"
         setContent { App(ble = ble) }
     }
 }
